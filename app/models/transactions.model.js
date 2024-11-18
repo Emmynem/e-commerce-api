@@ -49,6 +49,10 @@ export default (sequelize, Sequelize) => {
 			type: Sequelize.STRING(200),
 			allowNull: true,
 		},
+		gateway_reference: {
+			type: Sequelize.STRING(200),
+			allowNull: true,
+		},
 		transaction_status: {
 			type: Sequelize.STRING(50),
 			allowNull: false,

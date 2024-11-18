@@ -39,6 +39,10 @@ export default (sequelize, Sequelize) => {
 			type: Sequelize.STRING(15),
 			allowNull: false
 		},
+		gateway_reference: {
+			type: Sequelize.STRING(200),
+			allowNull: true,
+		},
 		contact_fullname: {
 			type: Sequelize.STRING(150),
 			allowNull: false,

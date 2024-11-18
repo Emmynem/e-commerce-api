@@ -5,6 +5,8 @@ export const primary_domain = "https://example.com";
 export const admin_domain = "https://commerce.q-ctrls.com";
 export const mailer_url = "https://api.mailer.xnyder.com";
 export const clouder_url = "https://api.clouder.xnyder.com";
+export const coinbase_payment_url = "https://api.commerce.coinbase.com/charges";
+export const coinbase_version = "2018-03-22";
 export const paystack_verify_payment_url = "https://api.paystack.co/transaction/verify/";
 export const squad_sandbox_verify_payment_url = "https://sandbox-api-d.squadco.com/transaction/verify/";
 export const squad_live_verify_payment_url = "https://api-d.squadco.com/transaction/verify/";
@@ -109,6 +111,8 @@ export const app_defaults = {
 	squad_public_key: "Squad_Public_Key",
 	squad_secret_key: "Squad_Secret_Key",
 	paypal_link: "Paypal_Link",
+	coinbase_api_key: "Coinbase_Api_Key",
+	coinbase_webhook_secret_key: "Coinbase_Webhook_Secret_Key",
 	minimum_shipping_fee: "Minimum_Shipping_Fee",
 	users_emails: "Users_Emails",
 	users_phone_numbers: "Users_Phone_Numbers",
@@ -160,6 +164,20 @@ export const default_app_values = [
 	},
 	{
 		unique_id: uuidv4(),
+		criteria: "Coinbase_Api_Key",
+		data_type: "STRING",
+		value: null,
+		status: 1
+	},
+	{
+		unique_id: uuidv4(),
+		criteria: "Coinbase_Secret_Key",
+		data_type: "STRING",
+		value: null,
+		status: 1
+	},
+	{
+		unique_id: uuidv4(),
 		criteria: "Minimum_Shipping_Fee",
 		data_type: "INTEGER",
 		value: 10,
@@ -204,12 +222,14 @@ export const payment_methods = {
 	card: "Credit/Debit Card",
 	wallet: "Wallet",
 	transfer: "Transfer", 
-	paypal: "Paypal"
+	paypal: "Paypal",
+	crypto: "Crypto"
 };
 export const gateways = {
 	paystack: "PAYSTACK",
 	squad: "SQUAD",
 	paypal: "PAYPAL",
+	coinbase: "COINBASE",
 	internal: "INTERNAL"
 };
 // End - Default Actions
@@ -557,6 +577,7 @@ export const validate_payment_method = (obj) => {
 		// method !== payment_methods.card && 
 		// method !== payment_methods.wallet && 
 		// method !== payment_methods.transfer && 
+		method !== payment_methods.crypto && 
 		method !== payment_methods.paypal
 	) return false;
 	return true;
@@ -568,6 +589,7 @@ export const validate_gateway = (obj) => {
 		// method !== gateways.paystack && 
 		// method !== gateways.squad && 
 		// method !== gateways.internal && 
+		method !== gateways.coinbase && 
 		method !== gateways.paypal
 	) return false;
 	return true;

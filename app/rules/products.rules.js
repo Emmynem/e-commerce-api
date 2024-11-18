@@ -138,7 +138,7 @@ export const product_rules = {
             .isFloat()
             .custom(price => {
                 if (price === 0) return false;
-                else if (price < 0) return false;
+                else if (price < 1) return false;
                 else return true;
             })
             .withMessage("Price invalid"),
@@ -148,7 +148,7 @@ export const product_rules = {
             .isFloat()
             .custom(sales_price => {
                 if (sales_price === 0) return false;
-                else if (sales_price < 0) return false;
+                else if (sales_price < 1) return false;
                 else return true;
             })
             .withMessage("Sales Price invalid")

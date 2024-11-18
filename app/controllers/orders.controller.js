@@ -6,11 +6,11 @@ import { ServerError, SuccessResponse, ValidationError, OtherSuccessResponse, No
 import { 
 	default_delete_status, default_status, tag_root, true_status, false_status, paginate, random_numbers, cart_checked_out, checked_out, processing, payment_methods, paid,
 	payment, completed, refunded, refund, shipping, shipped, refund_denied, currency, disputed, app_defaults, return_all_letters_uppercase, max_product_price_shipping, 
-	dummy_product_image, anonymous, cancelled, transaction_types, zero, return_all_letters_lowercase, mailer_url
+	dummy_product_image, anonymous, cancelled, transaction_types, zero, return_all_letters_lowercase, mailer_url, coinbase_payment_url, coinbase_version
 } from '../config/config.js';
 import db from "../models/index.js";
 import { 
-	user_order_processing, user_order_completed, user_order_in_transit, user_order_paid, user_order_refund_dispute, user_order_shipped, user_orders_cancelled
+	user_order_processing, user_order_completed, user_order_in_transit, user_order_paid, user_order_refund_dispute, user_order_shipped, user_orders_cancelled, user_order_pay
 } from '../config/templates.js';
 
 dotenv.config();
@@ -616,11 +616,11 @@ export async function addExternalOrder(req, res) {
 					});
 
 					if (current_product) {
-						const total_quantity = element.quantity;
-						const cost = current_product.sales_price === 0 || current_product.sales_price === null ? current_product.price * total_quantity : current_product.sales_price * total_quantity;
-						const quantity_even = Math.floor(total_quantity / current_product.max_quantity);
+						const total_quantity = parseInt(element.quantity);
+						const cost = parseInt(current_product.sales_price) === 0 || current_product.sales_price === null ? parseInt(current_product.price) * total_quantity : parseInt(current_product.sales_price) * total_quantity;
+						const quantity_even = Math.floor(total_quantity / parseInt(current_product.max_quantity));
 
-						const shipping_fee = cost > max_product_price_shipping ? ((app_default.value * (cost / max_product_price_shipping)) + (total_quantity > current_product.max_quantity ? app_default.value * quantity_even : zero)) : (total_quantity > current_product.max_quantity ? app_default.value * quantity_even : app_default.value);
+						const shipping_fee = cost > max_product_price_shipping ? ((parseInt(app_default.value) * (cost / max_product_price_shipping)) + (total_quantity > parseInt(current_product.max_quantity) ? parseInt(app_default.value) * quantity_even : zero)) : (total_quantity > parseInt(current_product.max_quantity) ? parseInt(app_default.value) * quantity_even : parseInt(app_default.value));
 					
 						const total_cost = cost + shipping_fee;
 						total_order_amount += total_cost;
@@ -632,6 +632,7 @@ export async function addExternalOrder(req, res) {
 							user_unique_id: null,
 							product_unique_id: current_product.unique_id,
 							tracking_number: tracking_number,
+							gateway_reference: null,
 							contact_fullname: payload.contact_fullname,
 							contact_email: payload.contact_email,
 							shipping_firstname: payload.shipping_firstname,
@@ -737,6 +738,191 @@ export async function addExternalOrder(req, res) {
 				}
 			} else {
 				BadRequestError(res, { unique_id: anonymous, text: "App Default for Shipping Fee not found!" }, null);
+			}
+		} catch (err) {
+			ServerError(res, { unique_id: anonymous, text: err.message }, null);
+		}
+	}
+};
+
+export async function initiateCryptoPayment(req, res) {
+	const errors = validationResult(req);
+	const payload = matchedData(req);
+
+	if (!errors.isEmpty()) {
+		ValidationError(res, { unique_id: anonymous, text: "Validation Error Occured" }, errors.array())
+	} else {
+		try {
+			const coinbase_api_key_app_default = await APP_DEFAULTS.findOne({
+				attributes: { exclude: ['id'] },
+				where: {
+					criteria: app_defaults.coinbase_api_key
+				}
+			});
+
+			if (coinbase_api_key_app_default) {
+				const orders = await ORDERS.findAll({
+					attributes: { exclude: ['id'] },
+					where: {
+						tracking_number: payload.tracking_number
+					},
+					include: [
+						{
+							model: PRODUCTS,
+							attributes: ['name', 'stripped', 'specification', 'quantity', 'remaining', 'max_quantity', 'price', 'sales_price', 'views', 'favorites'],
+							include: [
+								{
+									model: PRODUCT_IMAGES,
+									attributes: ['image']
+								},
+							]
+						},
+					],
+				});
+
+				if (orders && orders.length > 0) {
+					let initialValue = 0;
+
+					let total_order_amount = orders.reduce(function (accumulator, curValue) {
+
+						return accumulator + curValue.amount
+
+					}, initialValue);
+
+					const all_mail_orders = orders.flatMap((e) => {
+						return {
+							quantity: e.quantity.toLocaleString(),
+							amount: e.amount.toLocaleString(),
+							shipping_fee: e.shipping_fee.toLocaleString(),
+							product_name: e.product.name,
+							product_image: e.product.product_images.length > 0 ? e.product.product_images[0].image : dummy_product_image,
+						}
+					});
+
+					const mail_data = {
+						to: orders[0].contact_email,
+						user_name: orders[0].contact_fullname,
+						tracking_number: orders[0].tracking_number,
+						amount: total_order_amount.toLocaleString(),
+						shipping_firstname: orders[0].shipping_firstname,
+						shipping_lastname: orders[0].shipping_lastname,
+						shipping_address: orders[0].shipping_address,
+						shipping_state: orders[0].shipping_state,
+						shipping_city: orders[0].shipping_city,
+						shipping_zip_code: orders[0].shipping_zip_code,
+						billing_firstname: orders[0].billing_firstname,
+						billing_lastname: orders[0].billing_lastname,
+						billing_address: orders[0].billing_address,
+						billing_state: orders[0].billing_state,
+						billing_city: orders[0].billing_city,
+						billing_zip_code: orders[0].billing_zip_code,
+						gateway: orders[0].gateway,
+						payment_method: orders[0].payment_method,
+						delivery_status: paid,
+						currency,
+						orders: all_mail_orders
+					};
+
+					const coinbase_payment_response = await axios.post(
+						`${coinbase_payment_url}`,
+						{
+							pricing_type: "fixed_price",
+							local_price: {
+								amount: total_order_amount.toString(),
+								currency: currency
+							},
+							metadata: {
+								name: orders[0].contact_fullname,
+								description: `Payment for order(s) - ${payload.tracking_number}`,
+								tracking_number: payload.tracking_number
+							}
+						},
+						{
+							headers: {
+								'X-CC-Api-Key': coinbase_api_key_app_default.value, 
+								'X-CC-Version': coinbase_version
+							}
+						}
+					);
+
+					if (coinbase_payment_response.status == 201) {
+						const coinbase_payment_id = coinbase_payment_response.data.data.id;
+						const coinbase_payment_hosted_url = coinbase_payment_response.data.data.hosted_url;
+
+						const { email_html, email_subject, email_text } = user_order_pay({ ...mail_data, coinbase_payment_hosted_url });
+
+						const mailer_response = await axios.post(
+							`${mailer_url}/send`,
+							{
+								host_type: host_type,
+								smtp_host: smtp_host,
+								username: cloud_mailer_username,
+								password: cloud_mailer_password,
+								from_email: from_email,
+								to_email: return_all_letters_lowercase(mail_data.to),
+								subject: email_subject,
+								text: email_text,
+								html: email_html
+							},
+							{
+								headers: {
+									'mailer-access-key': cloud_mailer_key
+								}
+							}
+						);
+
+						if (mailer_response.data.success) {
+							if (mailer_response.data.data === null) {
+								BadRequestError(res, { unique_id: tag_root, text: "Unable to send email to user" }, null);
+							} else {
+								await db.sequelize.transaction(async (transaction) => {
+									const update_order = await ORDERS.update(
+										{
+											gateway_reference: coinbase_payment_id,
+										}, {
+											where: {
+												tracking_number: payload.tracking_number,
+												status: default_status
+											},
+											transaction
+										}
+									);
+			
+									const transactions = await TRANSACTIONS.create(
+										{
+											unique_id: uuidv4(),
+											user_unique_id: null,
+											type: transaction_types.payment,
+											gateway: orders[0].gateway,
+											payment_method: orders[0].payment_method,
+											currency,
+											amount: total_order_amount,
+											reference: payload.tracking_number,
+											gateway_reference: coinbase_payment_id,
+											transaction_status: processing,
+											details: coinbase_payment_hosted_url,
+											status: default_status
+										}, { transaction }
+									);
+		
+									if (update_order > 0 && transactions) {
+										SuccessResponse(res, { unique_id: orders[0].contact_email, text: "Payment initiated successfully!" }, { tracking_number: payload.tracking_number, coinbase_payment_hosted_url, coinbase_payment_id, amount: total_order_amount, currency });
+									} else {
+										throw new Error("Error creating transaction");
+									}
+								});
+							}
+						} else {
+							BadRequestError(res, { unique_id: tag_root, text: mailer_response.data.message }, null);
+						}
+					} else {
+						BadRequestError(res, { unique_id: anonymous, text: "Unable to initiate payment charge" }, null);
+					}
+				} else {
+					BadRequestError(res, { unique_id: anonymous, text: "Orders not found!" }, null);
+				}
+			} else {
+				BadRequestError(res, { unique_id: anonymous, text: "App Default for Payment not found!" }, null);
 			}
 		} catch (err) {
 			ServerError(res, { unique_id: anonymous, text: err.message }, null);

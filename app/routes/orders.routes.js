@@ -5,7 +5,7 @@ import { user_rules } from "../rules/users.rules.js";
 import { default_rules } from "../rules/default.rules.js";
 import {
 	addExternalOrder, addOrder, disputeOrderForRefund, getOrder, getOrders, getOrdersSpecifically, rootGetOrder, rootGetOrders, rootGetOrdersSpecifically, updateOrderCancelled, 
-	updateOrderCompleted, updateOrderInTransit, updateOrderPaid, updateOrderShipped, publicGetOrder, publicGetOrdersSpecifically
+	updateOrderCompleted, updateOrderInTransit, updateOrderPaid, updateOrderShipped, publicGetOrder, publicGetOrdersSpecifically, initiateCryptoPayment
 } from "../controllers/orders.controller.js";
 
 export default function (app) {
@@ -32,6 +32,7 @@ export default function (app) {
 
 	app.post("/add/order", [checks.verifyToken, checks.isUser, order_rules.forAddingViaProducts], addOrder);
 	app.post("/add/external/order", [order_rules.forAddingViaProducts], addExternalOrder);
+	app.post("/initiate/order/payment", [order_rules.forFindingOrdersViaTrackingNumber], initiateCryptoPayment);
 	
 	app.post("/user/order/dispute", [order_rules.forFindingOrder, order_rules.forDisputingRefund], disputeOrderForRefund);
 

@@ -61,7 +61,7 @@ export const transaction_rules = {
             .exists({ checkNull: true, checkFalsy: true })
             .bail()
             .custom(gateway => !!validate_gateway(gateway))
-            .withMessage(`Invalid gateway, accepts - ${gateways.paypal}`),
+            .withMessage(`Invalid gateway, accepts - ${gateways.paypal} & ${gateways.coinbase}`),
         check('payment_method', "Payment Method is required")
             .exists({ checkNull: true, checkFalsy: true })
             .bail()
@@ -69,7 +69,7 @@ export const transaction_rules = {
             .withMessage("Invalid length (3 - 20) characters")
             .bail()
             .custom(payment_method => !!validate_payment_method(payment_method))
-            .withMessage(`Invalid payment method, accepted methods (${payment_methods.paypal})`),
+            .withMessage(`Invalid payment method, accepted methods (${payment_methods.paypal} & ${payment_methods.crypto})`),
         check('amount', "Amount is required")
             .exists({ checkNull: true, checkFalsy: true })
             .bail()

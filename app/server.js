@@ -10,7 +10,7 @@ import db from "./models/index.js";
 import { createApiKeys, createAppDefaults } from './config/default.config.js';
 import authRoutes from "./routes/auth.routes.js";
 // import usersRoutes from "./routes/users.routes.js";
-// import transactionsRoutes from "./routes/transactions.routes.js";
+import transactionsRoutes from "./routes/transactions.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import categoriesRoutes from "./routes/categories.routes.js";
 import disputesRoutes from "./routes/disputes.routes.js";
@@ -54,7 +54,7 @@ app.use(cors(options));
 
 // simple route
 app.get("/", (request, response) => {
-	SuccessResponse(response, "E-commerce activated!");
+	SuccessResponse(response, "Compute Haven E-commerce activated!");
 })
 
 // Sequelize initialization
@@ -76,6 +76,7 @@ disputesRoutes(app);
 favoritesRoutes(app);
 ordersRoutes(app);
 productsRoutes(app);
+transactionsRoutes(app);
 
 // change timezone for app
 process.env.TZ = "UTC";
