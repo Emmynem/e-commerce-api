@@ -11,6 +11,7 @@ import ordersModel from "./orders.model.js";
 import productsModel from "./products.model.js";
 import productImagesModel from "./productImages.model.js";
 import transactionsModel from "./transactions.model.js";
+import newsletterModel from "./newsletter.model.js";
 
 const sequelize = new Sequelize(
 	DB,
@@ -53,6 +54,7 @@ db.orders = ordersModel(sequelize, Sequelize);
 db.products = productsModel(sequelize, Sequelize);
 db.product_images = productImagesModel(sequelize, Sequelize);
 db.transactions = transactionsModel(sequelize, Sequelize);
+db.newsletter = newsletterModel(sequelize, Sequelize);
 
 // End - Binding models
 

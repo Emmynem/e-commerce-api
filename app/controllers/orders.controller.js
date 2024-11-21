@@ -818,7 +818,7 @@ export async function initiateCryptoPayment(req, res) {
 						billing_zip_code: orders[0].billing_zip_code,
 						gateway: orders[0].gateway,
 						payment_method: orders[0].payment_method,
-						delivery_status: paid,
+						delivery_status: processing,
 						currency,
 						orders: all_mail_orders
 					};

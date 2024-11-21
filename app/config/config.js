@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 
-export const primary_domain = "https://example.com";
+export const primary_domain = "https://computehaven.com";
 export const admin_domain = "https://commerce.q-ctrls.com";
 export const mailer_url = "https://api.mailer.xnyder.com";
 export const clouder_url = "https://api.clouder.xnyder.com";
@@ -97,7 +97,7 @@ export const default_delete_status = 0;
 export const default_pending_status = 2;
 
 export const cart_checked_out = 2;
-export const max_product_price_shipping = 1000;
+export const max_product_price_shipping = 2500;
 
 export const dummy_product_image = "https://res.cloudinary.com/hydraxpress/image/upload/v1714846885/branding/nf02tjngtryzqndy3ota.jpg";
 

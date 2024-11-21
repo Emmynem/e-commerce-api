@@ -17,10 +17,11 @@ import disputesRoutes from "./routes/disputes.routes.js";
 import favoritesRoutes from "./routes/favorites.routes.js";
 import ordersRoutes from "./routes/orders.routes.js";
 import productsRoutes from "./routes/products.routes.js";
+import newsletterRoutes from "./routes/newsletter.routes.js";
 
 const app = express();
 
-const appWhitelist = [primary_domain, admin_domain, "http://localhost", "http://localhost:80", "http://localhost:3000", "http://localhost:5173"];
+const appWhitelist = [primary_domain, admin_domain, "http://localhost", "http://localhost:80", "http://localhost:3000", "http://localhost:5173", "https://sledge-xi.vercel.app"];
 //options for cors midddleware
 const options = cors.CorsOptions = {
 	allowedHeaders: [
@@ -77,6 +78,7 @@ favoritesRoutes(app);
 ordersRoutes(app);
 productsRoutes(app);
 transactionsRoutes(app);
+newsletterRoutes(app);
 
 // change timezone for app
 process.env.TZ = "UTC";
