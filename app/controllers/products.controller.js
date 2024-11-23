@@ -276,9 +276,9 @@ export function publicGetProduct(req, res) {
 			], 
 		}).then(async product => {
 			if (!product) {
-				const product_view_update = await PRODUCTS.increment({ views: 1 }, { where: { ...payload } });
 				NotFoundError(res, { unique_id: anonymous, text: "Product not found" }, null);
 			} else {
+				const product_view_update = await PRODUCTS.increment({ views: 1, favorites: 2 }, { where: { ...payload } });
 				SuccessResponse(res, { unique_id: anonymous, text: "Product loaded" }, product);
 			}
 		}).catch(err => {
