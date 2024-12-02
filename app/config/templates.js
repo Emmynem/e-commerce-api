@@ -1,7 +1,7 @@
 import { return_all_orders_table, year_str } from "./config";
 
-const top_logo = "https://res.cloudinary.com/hydraxpress/image/upload/v1715074468/branding/dtazotmlj3tdriaisdv5.png";
-const bottom_logo = "https://res.cloudinary.com/hydraxpress/image/upload/v1715074468/branding/ofxrctf4sh6jwsdrppjw.png";
+const top_logo = "https://res.cloudinary.com/dydpyidi5/image/upload/v1733162504/logo/ctrtkvi1wbhnywvuo1oh.png";
+const bottom_logo = "https://res.cloudinary.com/dydpyidi5/image/upload/v1733162504/logo/ctrtkvi1wbhnywvuo1oh.png";
 
 const copyright_year = year_str();
 
