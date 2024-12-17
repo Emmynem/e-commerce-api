@@ -1,3 +1,3 @@
-# codality-api
+# e-commerce-api
 
-This is a Rest API for Codality Online Learning Platform.
+This is a Rest API for E-commerce platform.
