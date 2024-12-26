@@ -10,6 +10,8 @@ import favoritesModel from "./favorites.model.js";
 import ordersModel from "./orders.model.js";
 import productsModel from "./products.model.js";
 import productImagesModel from "./productImages.model.js";
+import ratingsModel from "./ratings.model.js";
+import ratingImagesModel from "./ratingImages.model.js";
 import transactionsModel from "./transactions.model.js";
 import newsletterModel from "./newsletter.model.js";
 
@@ -55,6 +57,8 @@ db.products = productsModel(sequelize, Sequelize);
 db.product_images = productImagesModel(sequelize, Sequelize);
 db.transactions = transactionsModel(sequelize, Sequelize);
 db.newsletter = newsletterModel(sequelize, Sequelize);
+db.ratings = ratingsModel(sequelize, Sequelize);
+db.rating_images = ratingImagesModel(sequelize, Sequelize);
 
 // End - Binding models
 
@@ -99,6 +103,21 @@ db.favorites.belongsTo(db.products, { foreignKey: 'product_unique_id', targetKey
 //    - Transactions
 db.users.hasMany(db.transactions, { foreignKey: 'user_unique_id', sourceKey: 'unique_id' });
 db.transactions.belongsTo(db.users, { foreignKey: 'user_unique_id', targetKey: 'unique_id' });
+
+//    - Ratings
+db.users.hasMany(db.ratings, { foreignKey: 'user_unique_id', sourceKey: 'unique_id' });
+db.ratings.belongsTo(db.users, { foreignKey: 'user_unique_id', targetKey: 'unique_id' });
+
+db.products.hasMany(db.ratings, { foreignKey: 'product_unique_id', sourceKey: 'unique_id' });
+db.ratings.belongsTo(db.products, { foreignKey: 'product_unique_id', targetKey: 'unique_id' });
+
+db.orders.hasMany(db.ratings, { foreignKey: 'order_unique_id', sourceKey: 'unique_id' });
+db.ratings.belongsTo(db.orders, { foreignKey: 'order_unique_id', targetKey: 'unique_id' });
+
+//    - Rating Images
+db.ratings.hasMany(db.rating_images, { foreignKey: 'rating_unique_id', sourceKey: 'unique_id' });
+db.rating_images.belongsTo(db.ratings, { foreignKey: 'rating_unique_id', targetKey: 'unique_id' });
+
 
 // End - Associations
 

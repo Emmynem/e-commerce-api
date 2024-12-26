@@ -16,6 +16,8 @@ const { clouder_key, cloudy_name, cloudy_key, cloudy_secret } = process.env;
 const PRODUCTS = db.products;
 const PRODUCT_IMAGES = db.product_images;
 const CATEGORIES = db.categories;
+const RATINGS = db.ratings;
+const RATING_IMAGES = db.rating_images;
 const Op = db.Sequelize.Op;
 
 export async function rootGetProducts(req, res) {
@@ -36,6 +38,16 @@ export async function rootGetProducts(req, res) {
 			},
 			{
 				model: PRODUCT_IMAGES,
+			},
+			{
+				model: RATINGS,
+				attributes: ['unique_id', 'rating', 'description'], 
+				include: [
+					{
+						model: RATING_IMAGES,
+						attributes: ['unique_id', 'image']
+					},
+				]
 			},
 		], 
 		distinct: true,
@@ -71,6 +83,16 @@ export function rootGetProduct(req, res) {
 				},
 				{
 					model: PRODUCT_IMAGES,
+				},
+				{
+					model: RATINGS,
+					attributes: ['unique_id', 'rating', 'description'],
+					include: [
+						{
+							model: RATING_IMAGES,
+							attributes: ['unique_id', 'image']
+						},
+					]
 				},
 			], 
 		}).then(product => {
@@ -157,6 +179,16 @@ export async function rootSearchProducts(req, res) {
 				{
 					model: PRODUCT_IMAGES,
 				},
+				{
+					model: RATINGS,
+					attributes: ['unique_id', 'rating', 'description'],
+					include: [
+						{
+							model: RATING_IMAGES,
+							attributes: ['unique_id', 'image']
+						},
+					]
+				},
 			], 
 			distinct: true,
 			offset: pagination.start,
@@ -201,6 +233,16 @@ export async function rootGetProductsSpecifically(req, res) {
 				{
 					model: PRODUCT_IMAGES,
 				},
+				{
+					model: RATINGS,
+					attributes: ['unique_id', 'rating', 'description'],
+					include: [
+						{
+							model: RATING_IMAGES,
+							attributes: ['unique_id', 'image']
+						},
+					]
+				},
 			], 
 			distinct: true,
 			offset: pagination.start,
@@ -236,6 +278,16 @@ export async function publicGetProducts(req, res) {
 			{
 				model: PRODUCT_IMAGES,
 				attributes: ['image']
+			},
+			{
+				model: RATINGS,
+				attributes: ['rating', 'description'],
+				include: [
+					{
+						model: RATING_IMAGES,
+						attributes: ['image']
+					},
+				]
 			},
 		], 
 		distinct: true,
@@ -273,12 +325,32 @@ export function publicGetProduct(req, res) {
 					model: PRODUCT_IMAGES,
 					attributes: ['image']
 				},
+				{
+					model: RATINGS,
+					attributes: ['rating', 'description'],
+					include: [
+						{
+							model: RATING_IMAGES,
+							attributes: ['image']
+						},
+					]
+				},
 			], 
 		}).then(async product => {
 			if (!product) {
 				NotFoundError(res, { unique_id: anonymous, text: "Product not found" }, null);
 			} else {
 				const product_view_update = await PRODUCTS.increment({ views: 1, favorites: 2 }, { where: { ...payload } });
+				const total_ratings_via_rating = await RATINGS.findAll({
+					attributes: ["rating", [db.sequelize.fn('count', db.sequelize.col('id')), 'total_count']],
+					where: {
+						product_unique_id: product.unique_id
+					},
+					group: "rating"
+				});
+
+				// Use this when ready ... 
+				// SuccessResponse(res, { unique_id: anonymous, text: "Product loaded" }, { product, total_ratings_via_rating });
 				SuccessResponse(res, { unique_id: anonymous, text: "Product loaded" }, product);
 			}
 		}).catch(err => {
@@ -361,6 +433,16 @@ export async function publicSearchProducts(req, res) {
 					model: PRODUCT_IMAGES,
 					attributes: ['image']
 				},
+				{
+					model: RATINGS,
+					attributes: ['rating', 'description'],
+					include: [
+						{
+							model: RATING_IMAGES,
+							attributes: ['image']
+						},
+					]
+				},
 			], 
 			distinct: true,
 			offset: pagination.start,
@@ -405,6 +487,16 @@ export async function publicGetProductsSpecifically(req, res) {
 				{
 					model: PRODUCT_IMAGES,
 					attributes: ['image']
+				},
+				{
+					model: RATINGS,
+					attributes: ['rating', 'description'],
+					include: [
+						{
+							model: RATING_IMAGES,
+							attributes: ['image']
+						},
+					]
 				},
 			],
 			distinct: true,

@@ -232,6 +232,28 @@ export const gateways = {
 	coinbase: "COINBASE",
 	internal: "INTERNAL"
 };
+export const ratings = [
+	{
+		rate: "Very Bad",
+		value: 1
+	},
+	{
+		rate: "Bad",
+		value: 2
+	},
+	{
+		rate: "Ok",
+		value: 3
+	},
+	{
+		rate: "Good",
+		value: 4
+	},
+	{
+		rate: "Very Good",
+		value: 5
+	}
+];
 // End - Default Actions
 
 // Default Transaction Types
@@ -532,6 +554,24 @@ export const return_bulk_product_images_array = (images, data) => {
 	}
 };
 
+export const return_bulk_rating_images_array = (images, data) => {
+	var results = [];
+	for (let index = 0; index < images.length; index++) {
+		const element = images[index];
+
+		results.push({
+			unique_id: uuidv4(),
+			rating_unique_id: data.rating_unique_id,
+			image: element.secure_url,
+			image_type: element.format,
+			image_public_id: element.public_id,
+			status: 1
+		});
+
+		if (index === images.length - 1) return results;
+	}
+};
+
 export const validate_future_date = (date) => {
 	const d = new Date(date);
 	const today = new Date();
@@ -569,6 +609,28 @@ export const validate_future_end_date_alt = (_start, _end) => {
 export const validate_product_specification = (value) => {
 	if (typeof value === "object") return true
 	else return false
+};
+
+export const get_min_and_max_ratings = () => {
+	let min = ratings[0].value;
+	let max = ratings[0].value;
+
+	ratings.forEach(element => {
+		const _value = element.value;
+		if (_value < min) min = _value;
+		if (_value > max) max = _value;
+	});
+
+	let both = { min, max };
+
+	return both;
+};
+
+export const validate_ratings = (rating) => {
+	const min_max = get_min_and_max_ratings();
+	if (rating < min_max.min) return false;
+	if (rating > min_max.max) return false;
+	return true;
 };
 
 export const validate_payment_method = (obj) => {

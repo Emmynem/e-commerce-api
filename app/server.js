@@ -18,6 +18,7 @@ import favoritesRoutes from "./routes/favorites.routes.js";
 import ordersRoutes from "./routes/orders.routes.js";
 import productsRoutes from "./routes/products.routes.js";
 import newsletterRoutes from "./routes/newsletter.routes.js";
+import ratingsRoutes from "./routes/ratings.routes.js";
 
 const app = express();
 
@@ -79,6 +80,7 @@ ordersRoutes(app);
 productsRoutes(app);
 transactionsRoutes(app);
 newsletterRoutes(app);
+ratingsRoutes(app);
 
 // change timezone for app
 process.env.TZ = "UTC";
