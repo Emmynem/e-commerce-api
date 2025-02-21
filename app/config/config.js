@@ -111,6 +111,11 @@ export const app_defaults = {
 	squad_public_key: "Squad_Public_Key",
 	squad_secret_key: "Squad_Secret_Key",
 	paypal_link: "Paypal_Link",
+	bnb_wallet_address: "Bnb_Wallet_Address",
+	btc_wallet_address: "Btc_Wallet_Address",
+	eth_wallet_address: "Eth_Wallet_Address",
+	sol_wallet_address: "Sol_Wallet_Address",
+	tron_wallet_address: "Tron_Wallet_Address",
 	coinbase_api_key: "Coinbase_Api_Key",
 	coinbase_webhook_secret_key: "Coinbase_Webhook_Secret_Key",
 	minimum_shipping_fee: "Minimum_Shipping_Fee",
@@ -158,6 +163,41 @@ export const default_app_values = [
 	{
 		unique_id: uuidv4(),
 		criteria: "Paypal_Link",
+		data_type: "STRING",
+		value: null,
+		status: 1
+	},
+	{
+		unique_id: uuidv4(),
+		criteria: "Bnb_Wallet_Address",
+		data_type: "STRING",
+		value: null,
+		status: 1
+	},
+	{
+		unique_id: uuidv4(),
+		criteria: "Btc_Wallet_Address",
+		data_type: "STRING",
+		value: null,
+		status: 1
+	},
+	{
+		unique_id: uuidv4(),
+		criteria: "Eth_Wallet_Address",
+		data_type: "STRING",
+		value: null,
+		status: 1
+	},
+	{
+		unique_id: uuidv4(),
+		criteria: "Sol_Wallet_Address",
+		data_type: "STRING",
+		value: null,
+		status: 1
+	},
+	{
+		unique_id: uuidv4(),
+		criteria: "Tron_Wallet_Address",
 		data_type: "STRING",
 		value: null,
 		status: 1
@@ -230,6 +270,7 @@ export const gateways = {
 	squad: "SQUAD",
 	paypal: "PAYPAL",
 	coinbase: "COINBASE",
+	wallets: "WALLETS",
 	internal: "INTERNAL"
 };
 export const ratings = [
@@ -652,6 +693,7 @@ export const validate_gateway = (obj) => {
 		// method !== gateways.squad && 
 		// method !== gateways.internal && 
 		method !== gateways.coinbase && 
+		method !== gateways.wallets && 
 		method !== gateways.paypal
 	) return false;
 	return true;
