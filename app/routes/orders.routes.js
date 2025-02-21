@@ -5,7 +5,8 @@ import { user_rules } from "../rules/users.rules.js";
 import { default_rules } from "../rules/default.rules.js";
 import {
 	addExternalOrder, addOrder, disputeOrderForRefund, getOrder, getOrders, getOrdersSpecifically, rootGetOrder, rootGetOrders, rootGetOrdersSpecifically, updateOrderCancelled, 
-	updateOrderCompleted, updateOrderInTransit, updateOrderPaid, updateOrderShipped, publicGetOrder, publicGetOrdersSpecifically, initiateCryptoPayment
+	updateOrderCompleted, updateOrderInTransit, updateOrderPaid, updateOrderShipped, publicGetOrder, publicGetOrdersSpecifically, initiateCryptoPayment, initiateWalletPayment, 
+	publicGetWallets, initiateNairaPayment
 } from "../controllers/orders.controller.js";
 
 export default function (app) {
@@ -29,10 +30,13 @@ export default function (app) {
 
 	app.get("/track/orders/via/tracking", [order_rules.forFindingOrdersViaTrackingNumber], publicGetOrdersSpecifically);
 	app.get("/track/order", [order_rules.forFindingOrder], publicGetOrder);
+	app.get("/wallets", publicGetWallets);
 
 	app.post("/add/order", [checks.verifyToken, checks.isUser, order_rules.forAddingViaProducts], addOrder);
 	app.post("/add/external/order", [order_rules.forAddingViaProducts], addExternalOrder);
 	app.post("/initiate/order/payment", [order_rules.forFindingOrdersViaTrackingNumber], initiateCryptoPayment);
+	app.post("/initiate/wallet/order/payment", [order_rules.forFindingOrdersViaTrackingNumber], initiateWalletPayment);
+	app.post("/initiate/naira/order/payment", [order_rules.forFindingOrdersViaTrackingNumber], initiateNairaPayment);
 	
 	app.post("/user/order/dispute", [order_rules.forFindingOrder, order_rules.forDisputingRefund], disputeOrderForRefund);
 
