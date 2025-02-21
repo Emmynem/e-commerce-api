@@ -369,6 +369,146 @@ export const user_order_pay = (data) => {
 	return { email_html, email_subject, email_text };
 };
 
+export const user_order_wallet_pay = (data) => {
+	const email_subject = `Pay for Order - ${data.tracking_number}`;
+	const email_text = `
+		<!DOCTYPE html>
+		<html lang="en">
+
+		<head>
+			<meta charset="UTF-8">
+			<meta http-equiv="X-UA-Compatible" content="IE=edge">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>User Order Wallet Pay</title>
+			<link rel="preconnect" href="https://fonts.googleapis.com">
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+			<link href="https://fonts.googleapis.com/css2?family=Lexend&display=swap" rel="stylesheet">
+		</head>
+
+		<body
+			style="background-color: #f5f5f5; font-family: 'Lexend', sans-serif; color: #333333; font-size: 14px; line-height: 1.5; margin: 0; padding: 0;">
+			<header style="display: block; text-align: center; padding: 20px;"> <img width="80" height="80" src="${top_logo}"
+					alt="logo"> <p style="color: #3175D0;">COMPUTE HAVEN</p> </header>
+			<div class="container"
+				style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+				<h2 style="margin-bottom: 10px; opacity: .7;">Payment of ${data.currency} ${data.amount} is due</h2>
+				<h3 style="margin-bottom: 20px;">Dear ${data.user_name},</h3>
+				<p style="margin-bottom: 10px;">Payment for your order(s) with tracking number <a style="font-size: 15px; opacity: .7;" href="https://computehaven.com/track/${data.tracking_number}">${data.tracking_number}</a> is due. Click on the button below to go to the tracking page to complete your payment.</p>
+				<a href="https://computehaven.com/track/${data.tracking_number}"
+			style="display: inline-block; background-color: #2A52BE; color: #fff; padding: 10px 20px; border-radius: 5px; text-decoration: none; margin: 20px 0;">Pay now</a>
+				<p style="margin-bottom: 10px;">Summary of your order(s) are shown below;</p>
+			</div>
+			<div class="container"
+				style="max-width: 600px; margin: 20px auto; padding: 5px 20px; background-color: #ffffff; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+				<h4 style="margin-bottom: 20px;">Order details <span style="float: right;">Total: ${data.currency} ${data.amount}</span></h4>
+				${return_all_orders_table(data.orders, data.currency)}
+				<h4 style="margin-top: 20px; margin-bottom: 20px;">Customer Information</h4>
+				<p style="font-size: small; font-weight: bold;">Shipping address <span style="float: right; font-weight: bold;">Billing address</span></p>
+				<p style="margin-top: -10px; font-size: small; font-weight: lighter;">${data.shipping_firstname} ${data.shipping_lastname} <span style="float: right; font-weight: lighter;">${data.billing_firstname} ${data.billing_lastname}</span></p>
+				<p style="margin-top: -10px; font-size: small; font-weight: lighter;">${data.shipping_address} <span style="float: right; font-weight: lighter;">${data.billing_address}</span></p>
+				<p style="margin-top: -10px; font-size: small; font-weight: lighter;">${data.shipping_city} ${data.shipping_state} ${data.shipping_zip_code} <span style="float: right; font-weight: lighter;">${data.billing_city} ${data.billing_state} ${data.billing_zip_code}</span></p>
+				
+				<h4 style="margin-top: 20px; margin-bottom: 20px;">Payment Information</h4>
+				<p style="margin-top: -10px; font-size: small; font-weight: lighter;">Payment Method: ${data.payment_method}</p>
+				<p style="margin-top: -10px; font-size: small; font-weight: lighter;">Delivery Status: ${data.delivery_status}</p>
+
+			</div>
+			<div class="container"
+				style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+				<h4 style="margin-bottom: 10px; opacity: .7">Contact Us</h4>
+				<p style="margin-bottom: 20px;">If you have any questions or need any assistance, please contact us at <a
+						href="mailto:info@computehaven.com" style="color: #223B6D;">customer support</a>. Our support
+					team is always ready to
+					assist you.</p>
+			</div>
+			<footer style="padding: 20px; display: block; text-align: center;">
+				<a href="https://computehaven.com" target="_blank">
+					<img width="70" src="${bottom_logo}" alt="logo">
+					<p style="color: #3175D0;">COMPUTE HAVEN</p>
+				</a>
+				<div style="margin: 15px 0px;">
+					<p style="margin-bottom: 15px;">You are receiving this email because you shopped at <a
+							href="computehaven.com">computehaven.com</a></p>
+					<p style="margin-bottom: 15px;">Copyright &copy; ${copyright_year}, Compute Haven, All rights
+						reserved.
+					</p>
+				</div>
+			</footer>
+		</body>
+
+		</html>
+	`;
+	const email_html = `
+		<!DOCTYPE html>
+		<html lang="en">
+
+		<head>
+			<meta charset="UTF-8">
+			<meta http-equiv="X-UA-Compatible" content="IE=edge">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>User Order Wallet Pay</title>
+			<link rel="preconnect" href="https://fonts.googleapis.com">
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+			<link href="https://fonts.googleapis.com/css2?family=Lexend&display=swap" rel="stylesheet">
+		</head>
+
+		<body
+			style="background-color: #f5f5f5; font-family: 'Lexend', sans-serif; color: #333333; font-size: 14px; line-height: 1.5; margin: 0; padding: 0;">
+			<header style="display: block; text-align: center; padding: 20px;"> <img width="80" height="80" src="${top_logo}"
+					alt="logo"> <p style="color: #3175D0;">COMPUTE HAVEN</p> </header>
+			<div class="container"
+				style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+				<h2 style="margin-bottom: 10px; opacity: .7;">Payment of ${data.currency} ${data.amount} is due</h2>
+				<h3 style="margin-bottom: 20px;">Dear ${data.user_name},</h3>
+				<p style="margin-bottom: 10px;">Payment for your order(s) with tracking number <a style="font-size: 15px; opacity: .7;" href="https://computehaven.com/track/${data.tracking_number}">${data.tracking_number}</a> is due. Click on the button below to go to the tracking page to complete your payment.</p>
+				<a href="https://computehaven.com/track/${data.tracking_number}"
+			style="display: inline-block; background-color: #2A52BE; color: #fff; padding: 10px 20px; border-radius: 5px; text-decoration: none; margin: 20px 0;">Pay now</a>
+				<p style="margin-bottom: 10px;">Summary of your order(s) are shown below;</p>
+			</div>
+			<div class="container"
+				style="max-width: 600px; margin: 20px auto; padding: 5px 20px; background-color: #ffffff; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+				<h4 style="margin-bottom: 20px;">Order details <span style="float: right;">Total: ${data.currency} ${data.amount}</span></h4>
+				${return_all_orders_table(data.orders, data.currency)}
+				<h4 style="margin-top: 20px; margin-bottom: 20px;">Customer Information</h4>
+				<p style="font-size: small; font-weight: bold;">Shipping address <span style="float: right; font-weight: bold;">Billing address</span></p>
+				<p style="margin-top: -10px; font-size: small; font-weight: lighter;">${data.shipping_firstname} ${data.shipping_lastname} <span style="float: right; font-weight: lighter;">${data.billing_firstname} ${data.billing_lastname}</span></p>
+				<p style="margin-top: -10px; font-size: small; font-weight: lighter;">${data.shipping_address} <span style="float: right; font-weight: lighter;">${data.billing_address}</span></p>
+				<p style="margin-top: -10px; font-size: small; font-weight: lighter;">${data.shipping_city} ${data.shipping_state} ${data.shipping_zip_code} <span style="float: right; font-weight: lighter;">${data.billing_city} ${data.billing_state} ${data.billing_zip_code}</span></p>
+				
+				<h4 style="margin-top: 20px; margin-bottom: 20px;">Payment Information</h4>
+				<p style="margin-top: -10px; font-size: small; font-weight: lighter;">Payment Method: ${data.payment_method}</p>
+				<p style="margin-top: -10px; font-size: small; font-weight: lighter;">Delivery Status: ${data.delivery_status}</p>
+
+			</div>
+			<div class="container"
+				style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+				<h4 style="margin-bottom: 10px; opacity: .7">Contact Us</h4>
+				<p style="margin-bottom: 20px;">If you have any questions or need any assistance, please contact us at <a
+						href="mailto:info@computehaven.com" style="color: #223B6D;">customer support</a>. Our support
+					team is always ready to
+					assist you.</p>
+			</div>
+			<footer style="padding: 20px; display: block; text-align: center;">
+				<a href="https://computehaven.com" target="_blank">
+					<img width="70" src="${bottom_logo}" alt="logo">
+					<p style="color: #3175D0;">COMPUTE HAVEN</p>
+				</a>
+				<div style="margin: 15px 0px;">
+					<p style="margin-bottom: 15px;">You are receiving this email because you shopped at <a
+							href="computehaven.com">computehaven.com</a></p>
+					<p style="margin-bottom: 15px;">Copyright &copy; ${copyright_year}, Compute Haven, All rights
+						reserved.
+					</p>
+				</div>
+			</footer>
+		</body>
+
+		</html>
+	`;
+
+	return { email_html, email_subject, email_text };
+};
+
 export const user_order_paid = (data) => {
 	const email_subject = `Order ${data.tracking_number} payment successful 🟢`;
 	const email_text = `
