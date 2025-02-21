@@ -6,11 +6,13 @@ import { ServerError, SuccessResponse, ValidationError, OtherSuccessResponse, No
 import { 
 	default_delete_status, default_status, tag_root, true_status, false_status, paginate, random_numbers, cart_checked_out, checked_out, processing, payment_methods, paid,
 	payment, completed, refunded, refund, shipping, shipped, refund_denied, currency, disputed, app_defaults, return_all_letters_uppercase, max_product_price_shipping, 
-	dummy_product_image, anonymous, cancelled, transaction_types, zero, return_all_letters_lowercase, mailer_url, coinbase_payment_url, coinbase_version
+	dummy_product_image, anonymous, cancelled, transaction_types, zero, return_all_letters_lowercase, mailer_url, coinbase_payment_url, coinbase_version, gateways, 
+	paystack_verify_payment_url, squad_sandbox_verify_payment_url
 } from '../config/config.js';
 import db from "../models/index.js";
 import { 
-	user_order_processing, user_order_completed, user_order_in_transit, user_order_paid, user_order_refund_dispute, user_order_shipped, user_orders_cancelled, user_order_pay
+	user_order_processing, user_order_completed, user_order_in_transit, user_order_paid, user_order_refund_dispute, user_order_shipped, user_orders_cancelled, user_order_pay,
+	user_order_wallet_pay
 } from '../config/templates.js';
 
 dotenv.config();
@@ -183,6 +185,29 @@ export async function publicGetOrdersSpecifically(req, res) {
 		const orderBy = req.query.orderBy || req.body.orderBy || "createdAt";
 		const sortBy = return_all_letters_uppercase(req.query.sortBy) || return_all_letters_uppercase(req.body.sortBy) || "DESC";
 
+		const wallet_addresses_app_default = await APP_DEFAULTS.findAll({
+			attributes: ["criteria", "value"],
+			where: {
+				[Op.or]: [
+					{
+						criteria: app_defaults.bnb_wallet_address
+					},
+					{
+						criteria: app_defaults.btc_wallet_address
+					},
+					{
+						criteria: app_defaults.eth_wallet_address
+					},
+					{
+						criteria: app_defaults.sol_wallet_address
+					},
+					{
+						criteria: app_defaults.tron_wallet_address
+					}
+				]
+			}
+		});
+
 		ORDERS.findAndCountAll({
 			attributes: { exclude: ['id', 'user_unique_id', 'createdAt', 'updatedAt'] },
 			where: {
@@ -215,7 +240,7 @@ export async function publicGetOrdersSpecifically(req, res) {
 				SuccessResponse(res, { unique_id: anonymous, text: "Orders Not found" }, []);
 			} else {
 				// SuccessResponse(res, { unique_id: anonymous, text: "Orders loaded" }, { ...orders, pages: pagination.pages });
-				SuccessResponse(res, { unique_id: anonymous, text: "Orders loaded" }, { ...orders });
+				SuccessResponse(res, { unique_id: anonymous, text: "Orders loaded" }, { ...orders, wallets: wallet_addresses_app_default });
 			}
 		}).catch(err => {
 			ServerError(res, { unique_id: anonymous, text: err.message }, null);
@@ -256,6 +281,46 @@ export function publicGetOrder(req, res) {
 				NotFoundError(res, { unique_id: anonymous, text: "Order not found" }, null);
 			} else {
 				SuccessResponse(res, { unique_id: anonymous, text: "Order loaded" }, order);
+			}
+		}).catch(err => {
+			ServerError(res, { unique_id: anonymous, text: err.message }, null);
+		});
+	}
+};
+
+export async function publicGetWallets(req, res) {
+	const errors = validationResult(req);
+	const payload = matchedData(req);
+
+	if (!errors.isEmpty()) {
+		ValidationError(res, { unique_id: anonymous, text: "Validation Error Occured" }, errors.array())
+	} else {
+		APP_DEFAULTS.findAll({
+			attributes: ["criteria", "value"],
+			where: {
+				[Op.or]: [
+					{
+						criteria: app_defaults.bnb_wallet_address
+					},
+					{
+						criteria: app_defaults.btc_wallet_address
+					},
+					{
+						criteria: app_defaults.eth_wallet_address
+					},
+					{
+						criteria: app_defaults.sol_wallet_address
+					},
+					{
+						criteria: app_defaults.tron_wallet_address
+					}
+				]
+			}
+		}).then(wallets => {
+			if (!wallets || wallets.length == 0) {
+				SuccessResponse(res, { unique_id: anonymous, text: "Wallets Not found" }, []);
+			} else {
+				SuccessResponse(res, { unique_id: anonymous, text: "Wallets loaded" }, wallets);
 			}
 		}).catch(err => {
 			ServerError(res, { unique_id: anonymous, text: err.message }, null);
@@ -930,6 +995,301 @@ export async function initiateCryptoPayment(req, res) {
 	}
 };
 
+export async function initiateWalletPayment(req, res) {
+	const errors = validationResult(req);
+	const payload = matchedData(req);
+
+	if (!errors.isEmpty()) {
+		ValidationError(res, { unique_id: anonymous, text: "Validation Error Occured" }, errors.array())
+	} else {
+		try {
+			const wallet_addresses_app_default = await APP_DEFAULTS.findAll({
+				attributes: ["criteria", "value"],
+				where: {
+					[Op.or]: [
+						{
+							criteria: app_defaults.bnb_wallet_address
+						},
+						{
+							criteria: app_defaults.btc_wallet_address
+						},
+						{
+							criteria: app_defaults.eth_wallet_address
+						},
+						{
+							criteria: app_defaults.sol_wallet_address
+						},
+						{
+							criteria: app_defaults.tron_wallet_address
+						}
+					]
+				}
+			});
+
+			if (wallet_addresses_app_default) {
+				const orders = await ORDERS.findAll({
+					attributes: { exclude: ['id'] },
+					where: {
+						tracking_number: payload.tracking_number
+					},
+					include: [
+						{
+							model: PRODUCTS,
+							attributes: ['name', 'stripped', 'specification', 'quantity', 'remaining', 'max_quantity', 'price', 'sales_price', 'views', 'favorites'],
+							include: [
+								{
+									model: PRODUCT_IMAGES,
+									attributes: ['image']
+								},
+							]
+						},
+					],
+				});
+
+				if (orders && orders.length > 0) {
+					let initialValue = 0;
+
+					let total_order_amount = orders.reduce(function (accumulator, curValue) {
+
+						return accumulator + curValue.amount
+
+					}, initialValue);
+
+					const all_mail_orders = orders.flatMap((e) => {
+						return {
+							quantity: e.quantity.toLocaleString(),
+							amount: e.amount.toLocaleString(),
+							shipping_fee: e.shipping_fee.toLocaleString(),
+							product_name: e.product.name,
+							product_image: e.product.product_images.length > 0 ? e.product.product_images[0].image : dummy_product_image,
+						}
+					});
+
+					const mail_data = {
+						to: orders[0].contact_email,
+						user_name: orders[0].contact_fullname,
+						tracking_number: orders[0].tracking_number,
+						amount: total_order_amount.toLocaleString(),
+						shipping_firstname: orders[0].shipping_firstname,
+						shipping_lastname: orders[0].shipping_lastname,
+						shipping_address: orders[0].shipping_address,
+						shipping_state: orders[0].shipping_state,
+						shipping_city: orders[0].shipping_city,
+						shipping_zip_code: orders[0].shipping_zip_code,
+						billing_firstname: orders[0].billing_firstname,
+						billing_lastname: orders[0].billing_lastname,
+						billing_address: orders[0].billing_address,
+						billing_state: orders[0].billing_state,
+						billing_city: orders[0].billing_city,
+						billing_zip_code: orders[0].billing_zip_code,
+						gateway: orders[0].gateway,
+						payment_method: orders[0].payment_method,
+						delivery_status: processing,
+						currency,
+						orders: all_mail_orders
+					};
+
+					const { email_html, email_subject, email_text } = user_order_wallet_pay(mail_data);
+
+					const mailer_response = await axios.post(
+						`${mailer_url}/send`,
+						{
+							host_type: host_type,
+							smtp_host: smtp_host,
+							username: cloud_mailer_username,
+							password: cloud_mailer_password,
+							from_email: from_email,
+							to_email: return_all_letters_lowercase(mail_data.to),
+							subject: email_subject,
+							text: email_text,
+							html: email_html
+						},
+						{
+							headers: {
+								'mailer-access-key': cloud_mailer_key
+							}
+						}
+					);
+
+					if (mailer_response.data.success) {
+						if (mailer_response.data.data === null) {
+							BadRequestError(res, { unique_id: tag_root, text: "Unable to send email to user" }, null);
+						} else {
+							await db.sequelize.transaction(async (transaction) => {
+								const transactions = await TRANSACTIONS.create(
+									{
+										unique_id: uuidv4(),
+										user_unique_id: null,
+										type: transaction_types.payment,
+										gateway: orders[0].gateway,
+										payment_method: orders[0].payment_method,
+										currency,
+										amount: total_order_amount,
+										reference: payload.tracking_number,
+										gateway_reference: null,
+										transaction_status: processing,
+										details: null,
+										status: default_status
+									}, { transaction }
+								);
+
+								if (transactions) {
+									SuccessResponse(res, { unique_id: orders[0].contact_email, text: "Payment initiated successfully!" }, { tracking_number: payload.tracking_number, amount: total_order_amount, currency, wallets: wallet_addresses_app_default });
+								} else {
+									throw new Error("Error creating transaction");
+								}
+							});
+						}
+					} else {
+						BadRequestError(res, { unique_id: tag_root, text: mailer_response.data.message }, null);
+					}
+				} else {
+					BadRequestError(res, { unique_id: anonymous, text: "Orders not found!" }, null);
+				}
+			} else {
+				BadRequestError(res, { unique_id: anonymous, text: "App Default for Payment not found!" }, null);
+			}
+		} catch (err) {
+			ServerError(res, { unique_id: anonymous, text: err.message }, null);
+		}
+	}
+};
+
+export async function initiateNairaPayment(req, res) {
+	const errors = validationResult(req);
+	const payload = matchedData(req);
+
+	if (!errors.isEmpty()) {
+		ValidationError(res, { unique_id: anonymous, text: "Validation Error Occured" }, errors.array())
+	} else {
+		try {
+			const orders = await ORDERS.findAll({
+				attributes: { exclude: ['id'] },
+				where: {
+					tracking_number: payload.tracking_number
+				},
+				include: [
+					{
+						model: PRODUCTS,
+						attributes: ['name', 'stripped', 'specification', 'quantity', 'remaining', 'max_quantity', 'price', 'sales_price', 'views', 'favorites'],
+						include: [
+							{
+								model: PRODUCT_IMAGES,
+								attributes: ['image']
+							},
+						]
+					},
+				],
+			});
+
+			if (orders && orders.length > 0) {
+				let initialValue = 0;
+
+				let total_order_amount = orders.reduce(function (accumulator, curValue) {
+
+					return accumulator + curValue.amount
+
+				}, initialValue);
+
+				const all_mail_orders = orders.flatMap((e) => {
+					return {
+						quantity: e.quantity.toLocaleString(),
+						amount: e.amount.toLocaleString(),
+						shipping_fee: e.shipping_fee.toLocaleString(),
+						product_name: e.product.name,
+						product_image: e.product.product_images.length > 0 ? e.product.product_images[0].image : dummy_product_image,
+					}
+				});
+
+				const mail_data = {
+					to: orders[0].contact_email,
+					user_name: orders[0].contact_fullname,
+					tracking_number: orders[0].tracking_number,
+					amount: total_order_amount.toLocaleString(),
+					shipping_firstname: orders[0].shipping_firstname,
+					shipping_lastname: orders[0].shipping_lastname,
+					shipping_address: orders[0].shipping_address,
+					shipping_state: orders[0].shipping_state,
+					shipping_city: orders[0].shipping_city,
+					shipping_zip_code: orders[0].shipping_zip_code,
+					billing_firstname: orders[0].billing_firstname,
+					billing_lastname: orders[0].billing_lastname,
+					billing_address: orders[0].billing_address,
+					billing_state: orders[0].billing_state,
+					billing_city: orders[0].billing_city,
+					billing_zip_code: orders[0].billing_zip_code,
+					gateway: orders[0].gateway,
+					payment_method: orders[0].payment_method,
+					delivery_status: processing,
+					currency,
+					orders: all_mail_orders
+				};
+
+				const { email_html, email_subject, email_text } = user_order_wallet_pay(mail_data);
+
+				const mailer_response = await axios.post(
+					`${mailer_url}/send`,
+					{
+						host_type: host_type,
+						smtp_host: smtp_host,
+						username: cloud_mailer_username,
+						password: cloud_mailer_password,
+						from_email: from_email,
+						to_email: return_all_letters_lowercase(mail_data.to),
+						subject: email_subject,
+						text: email_text,
+						html: email_html
+					},
+					{
+						headers: {
+							'mailer-access-key': cloud_mailer_key
+						}
+					}
+				);
+
+				if (mailer_response.data.success) {
+					if (mailer_response.data.data === null) {
+						BadRequestError(res, { unique_id: tag_root, text: "Unable to send email to user" }, null);
+					} else {
+						const details = `NGN ${total_order_amount.toLocaleString()} ${transaction_types.payment.toLowerCase()}, via ${orders[0].payment_method} - ${orders[0].gateway} for orders, tracking number ${payload.tracking_number}`;
+
+						await db.sequelize.transaction(async (transaction) => {
+							const transactions = await TRANSACTIONS.create(
+								{
+									unique_id: uuidv4(),
+									user_unique_id: null,
+									type: transaction_types.payment,
+									gateway: orders[0].gateway,
+									payment_method: orders[0].payment_method,
+									currency,
+									amount: total_order_amount,
+									reference: payload.tracking_number,
+									gateway_reference: null,
+									transaction_status: processing,
+									details,
+									status: default_status
+								}, { transaction }
+							);
+
+							if (transactions) {
+								SuccessResponse(res, { unique_id: orders[0].contact_email, text: "Payment initiated successfully!" }, { tracking_number: payload.tracking_number, amount: total_order_amount, currency });
+							} else {
+								throw new Error("Error creating transaction");
+							}
+						});
+					}
+				} else {
+					BadRequestError(res, { unique_id: tag_root, text: mailer_response.data.message }, null);
+				}
+			} else {
+				BadRequestError(res, { unique_id: anonymous, text: "Orders not found!" }, null);
+			}
+		} catch (err) {
+			ServerError(res, { unique_id: anonymous, text: err.message }, null);
+		}
+	}
+};
+
 export async function updateOrderPaid(req, res) {
 	const errors = validationResult(req);
 	const payload = matchedData(req);
@@ -1000,71 +1360,263 @@ export async function updateOrderPaid(req, res) {
 					orders: all_mail_orders
 				};
 
-				const { email_html, email_subject, email_text } = user_order_paid(mail_data);
-
-				const mailer_response = await axios.post(
-					`${mailer_url}/send`,
-					{
-						host_type: host_type,
-						smtp_host: smtp_host,
-						username: cloud_mailer_username,
-						password: cloud_mailer_password,
-						from_email: from_email,
-						to_email: return_all_letters_lowercase(mail_data.to),
-						subject: email_subject,
-						text: email_text,
-						html: email_html
-					},
-					{
-						headers: {
-							'mailer-access-key': cloud_mailer_key
-						}
-					}
-				);
-
-				if (mailer_response.data.success) {
-					if (mailer_response.data.data === null) {
-						BadRequestError(res, { unique_id: tag_root, text: "Unable to send email to user" }, null);
-					} else {
-						await db.sequelize.transaction(async (transaction) => {
-							const update_order = await ORDERS.update(
-								{
-									paid: true_status,
-									delivery_status: paid,
-								}, {
-									where: {
-										tracking_number: payload.tracking_number,
-										status: default_status
-									},
-									transaction
-								}
-							);
-		
-							const transactions = await TRANSACTIONS.create(
-								{
-									unique_id: uuidv4(),
-									user_unique_id: null,
-									type: transaction_types.payment,
-									gateway: orders[0].gateway,
-									payment_method: orders[0].payment_method,
-									currency,
-									amount: total_order_amount,
-									reference: payload.tracking_number,
-									transaction_status: completed,
-									details: null,
-									status: default_status
-								}, { transaction }
-							);
-		
-							if (update_order > 0 && transactions) {
-								SuccessResponse(res, { unique_id: tag_root, text: "Orders paid successfully!" }, null);
-							} else {
-								throw new Error("Orders not found");
+				if (orders[0].payment_method === payment_methods.card) {
+					if (orders[0].gateway === gateways.paystack) {
+						const app_default = await APP_DEFAULTS.findOne({
+							attributes: { exclude: ['id'] },
+							where: {
+								criteria: app_defaults.paystack_secret_key
 							}
 						});
+
+						if (app_default) {
+							try {
+								const paystack_transaction_res = await axios.get(
+									`${paystack_verify_payment_url}${orders[0].tracking_number}`,
+									{
+										headers: {
+											'Authorization': `Bearer ${app_default.value}`
+										}
+									}
+								);
+
+								if (paystack_transaction_res.data.status !== true) {
+									BadRequestError(res, { unique_id: tag_root, text: "Error getting payment for validation" }, null);
+								} else if (paystack_transaction_res.data.data.status !== "success") {
+									BadRequestError(res, { unique_id: tag_root, text: `Payment unsuccessful (Status - ${return_all_letters_uppercase(paystack_transaction_res.data.data.status)})` }, null);
+								} else {
+									const { email_html, email_subject, email_text } = user_order_paid(mail_data);
+
+									const mailer_response = await axios.post(
+										`${mailer_url}/send`,
+										{
+											host_type: host_type,
+											smtp_host: smtp_host,
+											username: cloud_mailer_username,
+											password: cloud_mailer_password,
+											from_email: from_email,
+											to_email: return_all_letters_lowercase(mail_data.to),
+											subject: email_subject,
+											text: email_text,
+											html: email_html
+										},
+										{
+											headers: {
+												'mailer-access-key': cloud_mailer_key
+											}
+										}
+									);
+
+									if (mailer_response.data.success) {
+										if (mailer_response.data.data === null) {
+											BadRequestError(res, { unique_id: tag_root, text: "Unable to send email to user" }, null);
+										} else {
+											await db.sequelize.transaction(async (transaction) => {
+												const update_order = await ORDERS.update(
+													{
+														paid: true_status,
+														delivery_status: paid,
+													}, {
+														where: {
+															tracking_number: payload.tracking_number,
+															status: default_status
+														},
+														transaction
+													}
+												);
+
+												const update_transaction = await TRANSACTIONS.update(
+													{
+														transaction_status: completed,
+													}, {
+														where: {
+															reference: payload.tracking_number,
+															status: default_status
+														},
+														transaction
+													}
+												);
+
+												if (update_order > 0 && update_transaction > 0) {
+													SuccessResponse(res, { unique_id: tag_root, text: "Orders paid successfully!" }, null);
+												} else {
+													throw new Error("Orders not found");
+												}
+											});
+										}
+									} else {
+										BadRequestError(res, { unique_id: tag_root, text: mailer_response.data.message }, null);
+									}
+								}
+							} catch (error) {
+								BadRequestError(res, { unique_id: tag_root, text: error.response ? error.response.data.message : error.message }, { err_code: error.code });
+							}
+						} else {
+							BadRequestError(res, { unique_id: tag_root, text: "App Default for Paystack Gateway not found!" }, null);
+						}
+					} else if (orders[0].gateway === gateways.squad) {
+						const app_default = await APP_DEFAULTS.findOne({
+							attributes: { exclude: ['id'] },
+							where: {
+								criteria: app_defaults.squad_secret_key
+							}
+						});
+
+						if (app_default) {
+							try {
+								const squad_transaction_res = await axios.get(
+									`${squad_sandbox_verify_payment_url}${orders[0].tracking_number}`,
+									{
+										headers: {
+											'Authorization': `Bearer ${app_default.value}`
+										}
+									}
+								);
+
+								if (squad_transaction_res.data.success !== true) {
+									BadRequestError(res, { unique_id: tag_root, text: "Error getting payment for validation" }, null);
+								} else if (squad_transaction_res.data.data.transaction_status !== "success") {
+									BadRequestError(res, { unique_id: tag_root, text: `Payment unsuccessful (Status - ${squad_transaction_res.data.data.transaction_status})` }, null);
+								}
+								// else if (squad_transaction_res.data.data.transaction_amount < current_payments.amount) {
+								// 	BadRequestError(res, { unique_id: tag_root, text: `Invalid transaction amount!` }, null);
+								// } 
+								else {
+									const { email_html, email_subject, email_text } = user_order_paid(mail_data);
+
+									const mailer_response = await axios.post(
+										`${mailer_url}/send`,
+										{
+											host_type: host_type,
+											smtp_host: smtp_host,
+											username: cloud_mailer_username,
+											password: cloud_mailer_password,
+											from_email: from_email,
+											to_email: return_all_letters_lowercase(mail_data.to),
+											subject: email_subject,
+											text: email_text,
+											html: email_html
+										},
+										{
+											headers: {
+												'mailer-access-key': cloud_mailer_key
+											}
+										}
+									);
+
+									if (mailer_response.data.success) {
+										if (mailer_response.data.data === null) {
+											BadRequestError(res, { unique_id: tag_root, text: "Unable to send email to user" }, null);
+										} else {
+											await db.sequelize.transaction(async (transaction) => {
+												const update_order = await ORDERS.update(
+													{
+														paid: true_status,
+														delivery_status: paid,
+													}, {
+														where: {
+															tracking_number: payload.tracking_number,
+															status: default_status
+														},
+														transaction
+													}
+												);
+
+												const update_transaction = await TRANSACTIONS.update(
+													{
+														transaction_status: completed,
+													}, {
+														where: {
+															reference: payload.tracking_number,
+															status: default_status
+														},
+														transaction
+													}
+												);
+
+												if (update_order > 0 && update_transaction > 0) {
+													SuccessResponse(res, { unique_id: tag_root, text: "Orders paid successfully!" }, null);
+												} else {
+													throw new Error("Orders not found");
+												}
+											});
+										}
+									} else {
+										BadRequestError(res, { unique_id: tag_root, text: mailer_response.data.message }, null);
+									}
+								}
+							} catch (error) {
+								BadRequestError(res, { unique_id: tag_root, text: error.response ? error.response.data.message : error.message }, { err_code: error.code });
+							}
+						} else {
+							BadRequestError(res, { unique_id: tag_root, text: "App Default for Squad Gateway not found!" }, null);
+						}
+					} else {
+						BadRequestError(res, { unique_id: tag_root, text: "Invalid transaction gateway!" }, null);
 					}
 				} else {
-					BadRequestError(res, { unique_id: tag_root, text: mailer_response.data.message }, null);
+					const { email_html, email_subject, email_text } = user_order_paid(mail_data);
+	
+					const mailer_response = await axios.post(
+						`${mailer_url}/send`,
+						{
+							host_type: host_type,
+							smtp_host: smtp_host,
+							username: cloud_mailer_username,
+							password: cloud_mailer_password,
+							from_email: from_email,
+							to_email: return_all_letters_lowercase(mail_data.to),
+							subject: email_subject,
+							text: email_text,
+							html: email_html
+						},
+						{
+							headers: {
+								'mailer-access-key': cloud_mailer_key
+							}
+						}
+					);
+	
+					if (mailer_response.data.success) {
+						if (mailer_response.data.data === null) {
+							BadRequestError(res, { unique_id: tag_root, text: "Unable to send email to user" }, null);
+						} else {
+							await db.sequelize.transaction(async (transaction) => {
+								const update_order = await ORDERS.update(
+									{
+										paid: true_status,
+										delivery_status: paid,
+									}, {
+										where: {
+											tracking_number: payload.tracking_number,
+											status: default_status
+										},
+										transaction
+									}
+								);
+	
+								const update_transaction = await TRANSACTIONS.update(
+									{
+										transaction_status: completed,
+									}, {
+										where: {
+											reference: payload.tracking_number,
+											status: default_status
+										},
+										transaction
+									}
+								);
+			
+								if (update_order > 0 && update_transaction > 0) {
+									SuccessResponse(res, { unique_id: tag_root, text: "Orders paid successfully!" }, null);
+								} else {
+									throw new Error("Orders not found");
+								}
+							});
+						}
+					} else {
+						BadRequestError(res, { unique_id: tag_root, text: mailer_response.data.message }, null);
+					}
 				}
 			} else {
 				BadRequestError(res, { unique_id: tag_root, text: "Orders not found!" }, null);
