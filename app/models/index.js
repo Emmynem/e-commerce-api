@@ -14,6 +14,7 @@ import ratingsModel from "./ratings.model.js";
 import ratingImagesModel from "./ratingImages.model.js";
 import transactionsModel from "./transactions.model.js";
 import newsletterModel from "./newsletter.model.js";
+import bannersModel from "./banners.model.js";
 
 const sequelize = new Sequelize(
 	DB,
@@ -59,6 +60,7 @@ db.transactions = transactionsModel(sequelize, Sequelize);
 db.newsletter = newsletterModel(sequelize, Sequelize);
 db.ratings = ratingsModel(sequelize, Sequelize);
 db.rating_images = ratingImagesModel(sequelize, Sequelize);
+db.banners = bannersModel(sequelize, Sequelize);
 
 // End - Binding models
 
