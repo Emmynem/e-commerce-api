@@ -808,7 +808,8 @@ export const return_courses_from_payments = (payments, data) => {
 
 export const paginate = (page, _records, total_records) => {
 	// Get total pages available for the amount of records needed in each page with total records
-	const records = !_records || _records < paginate_limit ? paginate_limit : _records;
+	// const records = !_records || _records < paginate_limit ? paginate_limit : _records;
+	const records = !_records ? paginate_limit : _records;
 	const pages = Math.ceil(total_records / records);
 	// return false if page is less than 1 (first page) or greater than pages (last page)
 	if (page < 1 || page > pages || !page) {
